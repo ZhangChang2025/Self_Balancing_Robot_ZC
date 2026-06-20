@@ -1,0 +1,4 @@
+".\Objects\STARTUP.obj",
+".\Objects\Three_In_One.obj" 
+TO ".\Objects\Three_In_One" 
+PRINT(".\Listings\Three_In_One.m51") RAMSIZE(256) 

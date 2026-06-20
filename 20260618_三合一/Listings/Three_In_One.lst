@@ -1,0 +1,272 @@
+C51 COMPILER V9.60.0.0   THREE_IN_ONE                                                      06/18/2026 15:25:47 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE THREE_IN_ONE
+OBJECT MODULE PLACED IN .\Objects\Three_In_One.obj
+COMPILER INVOKED BY: D:\Keil5\Keil_v5\C51\BIN\C51.EXE Three_In_One.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.
+                    -\Listings\Three_In_One.lst) OBJECT(.\Objects\Three_In_One.obj)
+
+line level    source
+
+   1          /***************************************************************************
+   2          Ҫ͢ú  LCD1602 + ؤĹǷ - ͬʱ¹ö¶¯ÎÄ×ÖºÍ²¥·ÅÒôÀÖ
+   3          Чڻú  LCD¹ö¶¯ÏÔʾÃû×Öì¬·䷄Í¬Ê±²¥·ÅСÐÇÐÇ
+   4          ******************************************************************************/
+   5          #include "reg51.h"
+   6          
+   7          /******** LCD IOӽڶ¨Òå ****************************************************/
+   8          sbit LCD_RS = P1^0;
+   9          sbit LCD_RW = P1^1;
+  10          sbit LCD_E  = P1^2;
+  11          #define LCD_Data P0
+  12          #define Busy    0x80
+  13          
+  14          /******** ·äÃùÆ÷Òý½Å ****************************************************/
+  15          sbit SPK = P1^5;
+  16          
+  17          /******** LCD ÏÔÊ¾ÎÄ×Ö ****************************************************/
+  18          unsigned char code line1[] = {"ZhangChang_2025210554    ZuoXingle_2025210561    ZhangYuxvan_2025210560    
+             -LuoBaishuo_2025210559"};
+  19          unsigned char code line2[] = {"202605_Self_Balancing_Robot"};
+  20          
+  21          /******** Òô·ûÆµÊ¶¨Òå£¨Gµ÷£¬12M§ñ£© ************************************/
+  22          #define D1  0xFC,0x44   // do   262Hz
+  23          #define D2  0xFC,0xAC   // re   294Hz
+  24          #define D3  0xFD,0x09   // mi   330Hz
+  25          #define D4  0xFD,0x34   // fa   349Hz
+  26          #define D5  0xFD,0x82   // suo  392Hz
+  27          #define D6  0xFD,0xC8   // la   440Hz
+  28          #define END 0x00,0x00
+  29          
+  30          /******** Ð¡ÐÇÐÇ ÀÖÆ× ****************************************************/
+  31          code unsigned int music[] = {
+  32              D1,4,  D1,4,  D5,4,  D5,4,  D6,4,  D6,4,  D5,8,
+  33              D4,4,  D4,4,  D3,4,  D3,4,  D2,4,  D2,4,  D1,8,
+  34              D5,4,  D5,4,  D4,4,  D4,4,  D3,4,  D3,4,  D2,8,
+  35              D5,4,  D5,4,  D4,4,  D4,4,  D3,4,  D3,4,  D2,8,
+  36              D1,4,  D1,4,  D5,4,  D5,4,  D6,4,  D6,4,  D5,8,
+  37              D4,4,  D4,4,  D3,4,  D3,4,  D2,4,  D2,4,  D1,8,
+  38              END,0
+  39          };
+  40          
+  41          /******** È«¾Ö±äÁ¿ ********************************************************/
+  42          unsigned char music_idx;     // µ±Ç°Òô·ûË÷Òý
+  43          unsigned char scroll_pos;    // ¹ö¶¯Î»ÖÃ
+  44          unsigned char str1_len;      // µÚÒ»ÐÐ×Ö·û´®³¤¶È
+  45          unsigned char str2_len;      // µÚ¶þÐÐ×Ö·û´®³¤¶È
+  46          
+  47          /******** LCD º¯ÊýÉùÃ÷ ****************************************************/
+  48          void WriteDataLCD(unsigned char dat);
+  49          void WriteCommandLCD(unsigned char cmd, unsigned char check);
+  50          unsigned char ReadStatusLCD(void);
+  51          void LCDInit(void);
+  52          void LCD_ScrollOneFrame(unsigned char pos);
+  53          
+C51 COMPILER V9.60.0.0   THREE_IN_ONE                                                      06/18/2026 15:25:47 PAGE 2   
+
+  54          /******** ÑÓÊ±º¯Êý ********************************************************/
+  55          void Delay5Ms(void);
+  56          void Delay400Ms(void);
+  57          void delay(unsigned int t);
+  58          
+  59          /******** Ö÷º¯Êý **********************************************************/
+  60          void main(void)
+  61          {
+  62   1          unsigned char note_idx = 0;
+  63   1          unsigned char beat;
+  64   1          unsigned int t;
+  65   1      
+  66   1          // ³õÊ¼»¯
+  67   1          Delay400Ms();
+  68   1          LCDInit();
+  69   1          Delay5Ms();
+  70   1      
+  71   1          // ¼ÆËã×Ö·û´®³¤¶È
+  72   1          str1_len = 0;
+  73   1          while(line1[str1_len] >= 0x20) str1_len++;
+  74   1          str2_len = 0;
+  75   1          while(line2[str2_len] >= 0x20) str2_len++;
+  76   1      
+  77   1          // ¶¨Ê±Æ÷³õÊ¼»¯£¨·äÃùÆ÷ÓÃ£©
+  78   1          TMOD = 0x01;
+  79   1          EA = 1;
+  80   1          ET0 = 1;
+  81   1          TR0 = 0;
+  82   1      
+  83   1          scroll_pos = 0;
+  84   1      
+  85   1          while(1)
+  86   1          {
+  87   2              // ¹ö¶¯ÏÔÊ¾Ò»Ö¡
+  88   2              LCD_ScrollOneFrame(scroll_pos);
+  89   2      
+  90   2              // ²¥·Åµ±Ç°Òô·û
+  91   2              if(!(music[note_idx] == 0x00 && music[note_idx+1] == 0x00))
+  92   2              {
+  93   3                  music_idx = note_idx;
+  94   3                  beat = (unsigned char)music[note_idx + 2];
+  95   3      
+  96   3                  TR0 = 1;
+  97   3                  for(t = 0; t < beat; t++)
+  98   3                  {
+  99   4                      delay(15000);
+ 100   4                  }
+ 101   3                  TR0 = 0;
+ 102   3                  SPK = 1;
+ 103   3      
+ 104   3                  note_idx += 3;
+ 105   3              }
+ 106   2              else
+ 107   2              {
+ 108   3                  note_idx = 0;  // ÀÖÇú½áÊø£¬ÖØÐÂ¿ªÊ¼
+ 109   3              }
+ 110   2      
+ 111   2              // ¹ö¶¯Î»ÖÃµÝÔö
+ 112   2              scroll_pos++;
+ 113   2              if(scroll_pos > str1_len + 16 && scroll_pos > str2_len + 16)
+ 114   2              {
+ 115   3                  scroll_pos = 0;
+C51 COMPILER V9.60.0.0   THREE_IN_ONE                                                      06/18/2026 15:25:47 PAGE 3   
+
+ 116   3              }
+ 117   2      
+ 118   2              // Òô·û¼äÏ¶
+ 119   2              delay(3000);
+ 120   2              delay(3000);
+ 121   2          }
+ 122   1      }
+ 123          
+ 124          /******** ¶¨Ê±Æ÷0ÖÐ¶Ï£¨·äÃùÆ÷·¢Éù£© *************************************/
+ 125          void timer0() interrupt 1
+ 126          {
+ 127   1          TH0 = music[music_idx];
+ 128   1          TL0 = music[music_idx + 1];
+ 129   1          SPK = ~SPK;
+ 130   1      }
+ 131          
+ 132          /******** LCD ¹ö¶¯ÏÔÊ¾Ò»Ö¡ ***********************************************/
+ 133          void LCD_ScrollOneFrame(unsigned char pos)
+ 134          {
+ 135   1          unsigned char i;
+ 136   1          signed char idx;
+ 137   1      
+ 138   1          WriteCommandLCD(0x01, 1);  // ÇåÆÁ
+ 139   1      
+ 140   1          // µÚÒ»ÐÐ
+ 141   1          WriteCommandLCD(0x80, 0);
+ 142   1          for(i = 0; i < 16; i++)
+ 143   1          {
+ 144   2              idx = i + pos - 16;
+ 145   2              if(idx >= 0 && idx < str1_len)
+ 146   2                  WriteDataLCD(line1[(unsigned char)idx]);
+ 147   2              else
+ 148   2                  WriteDataLCD(' ');
+ 149   2          }
+ 150   1      
+ 151   1          // µÚ¶þÐÐ
+ 152   1          WriteCommandLCD(0xC0, 0);
+ 153   1          for(i = 0; i < 16; i++)
+ 154   1          {
+ 155   2              idx = i + pos - 16;
+ 156   2              if(idx >= 0 && idx < str2_len)
+ 157   2                  WriteDataLCD(line2[(unsigned char)idx]);
+ 158   2              else
+ 159   2                  WriteDataLCD(' ');
+ 160   2          }
+ 161   1      }
+ 162          
+ 163          /******** LCD ³õÊ¼»¯ ******************************************************/
+ 164          void LCDInit(void)
+ 165          {
+ 166   1          LCD_Data = 0;
+ 167   1          WriteCommandLCD(0x38,0);
+ 168   1          Delay5Ms();
+ 169   1          WriteCommandLCD(0x38,0);
+ 170   1          Delay5Ms();
+ 171   1          WriteCommandLCD(0x38,0);
+ 172   1          Delay5Ms();
+ 173   1      
+ 174   1          WriteCommandLCD(0x38,1);
+ 175   1          WriteCommandLCD(0x08,1);
+ 176   1          WriteCommandLCD(0x01,1);
+ 177   1          WriteCommandLCD(0x06,1);
+C51 COMPILER V9.60.0.0   THREE_IN_ONE                                                      06/18/2026 15:25:47 PAGE 4   
+
+ 178   1          WriteCommandLCD(0x0C,1);
+ 179   1      }
+ 180          
+ 181          /******** LCD Ð´ÃüÁî ******************************************************/
+ 182          void WriteCommandLCD(unsigned char cmd, unsigned char check)
+ 183          {
+ 184   1          if(check) ReadStatusLCD();
+ 185   1          LCD_Data = cmd;
+ 186   1          LCD_RS = 0;
+ 187   1          LCD_RW = 0;
+ 188   1          LCD_E = 0;
+ 189   1          LCD_E = 0;
+ 190   1          LCD_E = 1;
+ 191   1      }
+ 192          
+ 193          /******** LCD Ð´Êý¾Ý ******************************************************/
+ 194          void WriteDataLCD(unsigned char dat)
+ 195          {
+ 196   1          ReadStatusLCD();
+ 197   1          LCD_Data = dat;
+ 198   1          LCD_RS = 1;
+ 199   1          LCD_RW = 0;
+ 200   1          LCD_E = 0;
+ 201   1          LCD_E = 0;
+ 202   1          LCD_E = 1;
+ 203   1      }
+ 204          
+ 205          /******** LCD ¶Á×´Ì¬ ******************************************************/
+ 206          unsigned char ReadStatusLCD(void)
+ 207          {
+ 208   1          LCD_Data = 0xFF;
+ 209   1          LCD_RS = 0;
+ 210   1          LCD_RW = 1;
+ 211   1          LCD_E = 0;
+ 212   1          LCD_E = 0;
+ 213   1          LCD_E = 1;
+ 214   1          while(LCD_Data & Busy);
+ 215   1          return(LCD_Data);
+ 216   1      }
+ 217          
+ 218          /******** ÑÓÊ±º¯Êý ********************************************************/
+ 219          void Delay5Ms(void)
+ 220          {
+ 221   1          unsigned int TempCyc = 5552;
+ 222   1          while(TempCyc--);
+ 223   1      }
+ 224          
+ 225          void Delay400Ms(void)
+ 226          {
+ 227   1          unsigned char TempCycA = 5;
+ 228   1          unsigned int TempCycB;
+ 229   1          while(TempCycA--)
+ 230   1          {
+ 231   2              TempCycB = 7269;
+ 232   2              while(TempCycB--);
+ 233   2          }
+ 234   1      }
+ 235          
+ 236          void delay(unsigned int t)
+ 237          {
+ 238   1          while(t--);
+ 239   1      }
+C51 COMPILER V9.60.0.0   THREE_IN_ONE                                                      06/18/2026 15:25:47 PAGE 5   
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    651    ----
+   CONSTANT SIZE    =    383    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4       9
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
