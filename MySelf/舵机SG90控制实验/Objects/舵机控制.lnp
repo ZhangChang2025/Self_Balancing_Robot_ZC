@@ -1,0 +1,4 @@
+".\Objects\STARTUP.obj",
+".\Objects\servo.obj" 
+TO ".\Objects\舵机控制" 
+PRINT(".\Listings\舵机控制.m51") RAMSIZE(256) 
