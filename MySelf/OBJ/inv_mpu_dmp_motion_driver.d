@@ -45,6 +45,8 @@
 ..\obj\inv_mpu_dmp_motion_driver.o: ..\BSP\Timer\bsp_timer.h
 ..\obj\inv_mpu_dmp_motion_driver.o: ..\BSP\Key\bsp_key.h
 ..\obj\inv_mpu_dmp_motion_driver.o: ..\BSP\Usart1\usart.h
+..\obj\inv_mpu_dmp_motion_driver.o: ..\BSP\Usart1\bsp_usart2.h
+..\obj\inv_mpu_dmp_motion_driver.o: ..\APP\app_k210.h
 ..\obj\inv_mpu_dmp_motion_driver.o: ..\BSP\Bluetooth\bsp_bluetooth.h
 ..\obj\inv_mpu_dmp_motion_driver.o: ..\BSP\Bluetooth\app_bluetooth.h
 ..\obj\inv_mpu_dmp_motion_driver.o: ..\BSP\OLED\bsp_oled.h

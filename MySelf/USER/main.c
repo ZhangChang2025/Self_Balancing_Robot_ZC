@@ -55,28 +55,32 @@ int main(void)
 
 	while(1)
 	{
-		// KEY1�л�ģʽ Bluetooth��Weightģʽ�л� KEY1 toggle between Bluetooth and Weight mode
+		// KEY1�л�ģʽ Bluetooth��QRģʽ�л� KEY1 toggle between Bluetooth and QR mode
 		if(Key1_State(1))
 		{
 			delay_ms(50);
 			if(g_car_mode == enMODE_BLUETOOTH)
 			{
-				g_car_mode = enMODE_WEIGHT;
-				weight_mode_flag = 1;
-				OLED_Draw_Line("Weight Mode!   ", 1, true, true);
+				g_car_mode = enMODE_QR;
+				OLED_Draw_Line("QR Code Mode!   ", 1, true, true);
 			}
 			else
 			{
 				g_car_mode = enMODE_BLUETOOTH;
-				weight_mode_flag = 0;
 				OLED_Draw_Line("Bluetooth Mode!", 1, true, true);
 			}
 			BEEP_BEEP = 1;
 			delay_ms(50);
 			BEEP_BEEP = 0;
 			
-			sprintf(showbuf,"weight_mode = %d  ",weight_mode_flag);
+			sprintf(showbuf,"car_mode = %d    ",g_car_mode);
 			OLED_Draw_Line(showbuf, 2, false, true);
+		}
+		
+		// QRģʽ: �������� K210 ��������ִ���ж� QR mode: execute action based on K210 QR code
+		if(g_car_mode == enMODE_QR)
+		{
+			Change_state();
 		}
 		
 		if (newLineReceived) //����ң�ط��� Bluetooth remote control service

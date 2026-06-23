@@ -41,6 +41,10 @@
 //Usart
 #include "usart.h"	
 
+//K210
+#include "bsp_usart2.h"
+#include "app_k210.h"
+
 //���� Bluetooth
 #include "bsp_bluetooth.h"
 #include "app_bluetooth.h"

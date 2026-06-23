@@ -47,6 +47,8 @@
 ..\obj\bsp_oled.o: ..\BSP\Timer\bsp_timer.h
 ..\obj\bsp_oled.o: ..\BSP\Key\bsp_key.h
 ..\obj\bsp_oled.o: ..\BSP\Usart1\usart.h
+..\obj\bsp_oled.o: ..\BSP\Usart1\bsp_usart2.h
+..\obj\bsp_oled.o: ..\APP\app_k210.h
 ..\obj\bsp_oled.o: ..\BSP\Bluetooth\bsp_bluetooth.h
 ..\obj\bsp_oled.o: ..\BSP\Bluetooth\app_bluetooth.h
 ..\obj\bsp_oled.o: ..\BSP\OLED\bsp_oled.h

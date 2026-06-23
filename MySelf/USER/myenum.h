@@ -84,7 +84,7 @@ typedef enum enCarState_t{
 typedef enum enCarMode_t{
   enMODE_READY = 0,
   enMODE_BLUETOOTH,
-  enMODE_WEIGHT
+  enMODE_QR
 }enCarMode;
 
 

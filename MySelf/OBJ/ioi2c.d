@@ -46,6 +46,8 @@
 ..\obj\ioi2c.o: ..\BSP\Timer\bsp_timer.h
 ..\obj\ioi2c.o: ..\BSP\Key\bsp_key.h
 ..\obj\ioi2c.o: ..\BSP\Usart1\usart.h
+..\obj\ioi2c.o: ..\BSP\Usart1\bsp_usart2.h
+..\obj\ioi2c.o: ..\APP\app_k210.h
 ..\obj\ioi2c.o: ..\BSP\Bluetooth\bsp_bluetooth.h
 ..\obj\ioi2c.o: ..\BSP\Bluetooth\app_bluetooth.h
 ..\obj\ioi2c.o: ..\BSP\OLED\bsp_oled.h

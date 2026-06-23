@@ -1,5 +1,5 @@
 #include "bsp_usart2.h"
-
+#include "app_k210.h"
 
 //USART2
 void USART2_init(u32 baudrate)
@@ -44,7 +44,7 @@ void USART2_init(u32 baudrate)
 }
 
 
-//·¢ËÍÒ»¸ö×Ö·û Send a character
+//ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö·ï¿½ Send a character
 void USART2_Send_U8(uint8_t ch)
 {
 	while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET)
@@ -52,11 +52,11 @@ void USART2_Send_U8(uint8_t ch)
 	USART_SendData(USART2, ch);
 }
 
-//·¢ËÍÒ»¸ö×Ö·û´®  Send a string
+//ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½  Send a string
 /**
- * @Brief: UsART2·¢ËÍÊý¾Ý UsART2 sends data
+ * @Brief: UsART2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ UsART2 sends data
  * @Note:  
- * @Parm: BufferPtr:´ý·¢ËÍµÄÊý¾Ý  Length:Êý¾Ý³¤¶È   BufferPtr: data to be sent Length: data length
+ * @Parm: BufferPtr:ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½ï¿½ï¿½ï¿½ï¿½  Length:ï¿½ï¿½ï¿½Ý³ï¿½ï¿½ï¿½   BufferPtr: data to be sent Length: data length
  * @Retval: 
  */
 void USART2_Send_ArrayU8(uint8_t *BufferPtr, uint16_t Length)
@@ -68,7 +68,7 @@ void USART2_Send_ArrayU8(uint8_t *BufferPtr, uint16_t Length)
 	}
 }
 
-//´®¿ÚÖÐ¶Ï·þÎñº¯Êý Serial port interrupt service function
+//ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ Serial port interrupt service function
 void USART2_IRQHandler(void)
 {
 	uint8_t Rx2_Temp;
@@ -76,6 +76,6 @@ void USART2_IRQHandler(void)
 	{
 		USART_ClearITPendingBit(USART2, USART_IT_RXNE);
 		Rx2_Temp = USART_ReceiveData(USART2);
-		USART2_Send_U8(Rx2_Temp);
+		Deal_K210(Rx2_Temp);
 	}
 }

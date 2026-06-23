@@ -50,6 +50,7 @@
 "..\obj\app_motor.o"
 "..\obj\pid_control.o"
 "..\obj\app_bluetooth.o"
+"..\obj\app_k210.o"
 "..\obj\inv_mpu.o"
 "..\obj\inv_mpu_dmp_motion_driver.o"
 "..\obj\filter.o"
