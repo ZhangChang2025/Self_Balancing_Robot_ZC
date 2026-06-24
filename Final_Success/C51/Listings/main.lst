@@ -1,0 +1,272 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              06/24/2026 16:25:37 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Keil5\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listing
+                    -s\main.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include "reg51.h"
+   2          
+   3          sbit LCD_RS = P1^0;
+   4          sbit LCD_RW = P1^1;
+   5          sbit LCD_E  = P1^2;
+   6          #define LCD_Data P0
+   7          #define Busy 0x80
+   8          
+   9          sbit KEY_CW  = P3^7;
+  10          sbit KEY_CCW = P3^6;
+  11          
+  12          sbit SG90 = P1^7;
+  13          sbit SPK  = P1^5;
+  14          
+  15          #define MODE_QR 'Q'
+  16          #define MODE_BT 'B'
+  17          #define MODE_ST 'S'
+  18          
+  19          volatile unsigned char g_mode = MODE_ST;
+  20          
+  21          unsigned char count;
+  22          unsigned char pulse_now;
+  23          unsigned char pulse_target;
+  24          unsigned char step_cnt;
+  25          
+  26          void delay_ms(unsigned int ms)
+  27          {
+  28   1          unsigned int i, j;
+  29   1          for (i = 0; i < ms; i++)
+  30   1              for (j = 0; j < 120; j++);
+  31   1      }
+  32          
+  33          unsigned char ReadStatusLCD(void)
+  34          {
+  35   1          LCD_Data = 0xFF;
+  36   1          LCD_RS = 0;
+  37   1          LCD_RW = 1;
+  38   1          LCD_E = 0;
+  39   1          LCD_E = 0;
+  40   1          LCD_E = 1;
+  41   1          while (LCD_Data & Busy);
+  42   1          return LCD_Data;
+  43   1      }
+  44          
+  45          void LCD_WriteCmd(unsigned char cmd, unsigned char check)
+  46          {
+  47   1          if (check) ReadStatusLCD();
+  48   1          LCD_Data = cmd;
+  49   1          LCD_RS = 0;
+  50   1          LCD_RW = 0;
+  51   1          LCD_E = 0;
+  52   1          LCD_E = 0;
+  53   1          LCD_E = 1;
+  54   1      }
+C51 COMPILER V9.60.0.0   MAIN                                                              06/24/2026 16:25:37 PAGE 2   
+
+  55          
+  56          void LCD_WriteData(unsigned char dat)
+  57          {
+  58   1          ReadStatusLCD();
+  59   1          LCD_Data = dat;
+  60   1          LCD_RS = 1;
+  61   1          LCD_RW = 0;
+  62   1          LCD_E = 0;
+  63   1          LCD_E = 0;
+  64   1          LCD_E = 1;
+  65   1      }
+  66          
+  67          void LCD_Init(void)
+  68          {
+  69   1          LCD_Data = 0;
+  70   1          LCD_WriteCmd(0x38, 0);
+  71   1          delay_ms(5);
+  72   1          LCD_WriteCmd(0x38, 0);
+  73   1          delay_ms(5);
+  74   1          LCD_WriteCmd(0x38, 0);
+  75   1          delay_ms(5);
+  76   1          LCD_WriteCmd(0x38, 1);
+  77   1          LCD_WriteCmd(0x08, 1);
+  78   1          LCD_WriteCmd(0x01, 1);
+  79   1          LCD_WriteCmd(0x06, 1);
+  80   1          LCD_WriteCmd(0x0C, 1);
+  81   1      }
+  82          
+  83          void LCD_ShowLine(unsigned char line, unsigned char code *str)
+  84          {
+  85   1          unsigned char i;
+  86   1          LCD_WriteCmd(line == 1 ? 0x80 : 0xC0, 1);
+  87   1          for (i = 0; i < 16; i++)
+  88   1          {
+  89   2              if (str[i] >= 0x20)
+  90   2                  LCD_WriteData(str[i]);
+  91   2              else
+  92   2                  LCD_WriteData(' ');
+  93   2          }
+  94   1      }
+  95          
+  96          void uart_init(void)
+  97          {
+  98   1          TMOD &= 0x0F;
+  99   1          TMOD |= 0x20;
+ 100   1          TH1 = 0xFD;
+ 101   1          TL1 = 0xFD;
+ 102   1          TR1 = 1;
+ 103   1          SCON = 0x50;
+ 104   1          ES = 1;
+ 105   1          EA = 1;
+ 106   1      }
+ 107          
+ 108          void set_led(unsigned char c)
+ 109          {
+ 110   1          if (c == MODE_BT)
+ 111   1              P2 = 0x00;
+ 112   1          else if (c == MODE_QR)
+ 113   1              P2 = ~0x01;
+ 114   1          else
+ 115   1              P2 = ~0x04;
+ 116   1      }
+C51 COMPILER V9.60.0.0   MAIN                                                              06/24/2026 16:25:37 PAGE 3   
+
+ 117          
+ 118          void timer0_init(void)
+ 119          {
+ 120   1          TMOD |= 0x02;
+ 121   1          TH0 = 0xA4;
+ 122   1          TL0 = 0xA4;
+ 123   1          ET0 = 1;
+ 124   1          TR0 = 1;
+ 125   1      }
+ 126          
+ 127          void servo_set_target(unsigned char target)
+ 128          {
+ 129   1          if (target > 25) target = 25;
+ 130   1          if (target < 5)  target = 5;
+ 131   1          pulse_target = target;
+ 132   1          step_cnt = 0;
+ 133   1      }
+ 134          
+ 135          void uart_isr(void) interrupt 4
+ 136          {
+ 137   1          if (RI)
+ 138   1          {
+ 139   2              RI = 0;
+ 140   2              g_mode = SBUF;
+ 141   2              set_led(g_mode);
+ 142   2          }
+ 143   1      }
+ 144          
+ 145          void timer0_isr(void) interrupt 1
+ 146          {
+ 147   1          if (++count >= 100)
+ 148   1              count = 0;
+ 149   1      
+ 150   1          SG90 = (count < pulse_now);
+ 151   1      
+ 152   1          if (pulse_now != pulse_target)
+ 153   1          {
+ 154   2              if (++step_cnt >= 20)
+ 155   2              {
+ 156   3                  step_cnt = 0;
+ 157   3                  if (pulse_now < pulse_target)
+ 158   3                      pulse_now++;
+ 159   3                  else
+ 160   3                      pulse_now--;
+ 161   3              }
+ 162   2          }
+ 163   1      
+ 164   1          SPK = 1;
+ 165   1      }
+ 166          
+ 167          void main(void)
+ 168          {
+ 169   1          uart_init();
+ 170   1          timer0_init();
+ 171   1      
+ 172   1          count = 0;
+ 173   1          pulse_now = 15;
+ 174   1          pulse_target = 15;
+ 175   1          step_cnt = 0;
+ 176   1      
+ 177   1          g_mode = MODE_ST;
+ 178   1          set_led(MODE_ST);
+C51 COMPILER V9.60.0.0   MAIN                                                              06/24/2026 16:25:37 PAGE 4   
+
+ 179   1      
+ 180   1          delay_ms(300);
+ 181   1          LCD_Init();
+ 182   1          LCD_ShowLine(1, "Blue_Tooth       ");
+ 183   1          LCD_ShowLine(2, "                ");
+ 184   1      
+ 185   1          {
+ 186   2              unsigned char last_mode = 0;
+ 187   2      
+ 188   2              while (1)
+ 189   2              {
+ 190   3                  if (KEY_CW == 0)
+ 191   3                  {
+ 192   4                      delay_ms(20);
+ 193   4                      if (KEY_CW == 0)
+ 194   4                      {
+ 195   5                          if (pulse_target <= 20)
+ 196   5                              servo_set_target(pulse_target + 5);
+ 197   5                          else
+ 198   5                              servo_set_target(25);
+ 199   5                          while (KEY_CW == 0);
+ 200   5                      }
+ 201   4                  }
+ 202   3      
+ 203   3                  if (KEY_CCW == 0)
+ 204   3                  {
+ 205   4                      delay_ms(20);
+ 206   4                      if (KEY_CCW == 0)
+ 207   4                      {
+ 208   5                          if (pulse_target >= 10)
+ 209   5                              servo_set_target(pulse_target - 5);
+ 210   5                          else
+ 211   5                              servo_set_target(5);
+ 212   5                          while (KEY_CCW == 0);
+ 213   5                      }
+ 214   4                  }
+ 215   3      
+ 216   3                  if (g_mode == MODE_QR)
+ 217   3                  {
+ 218   4                      if (last_mode != MODE_QR)
+ 219   4                      {
+ 220   5                          last_mode = MODE_QR;
+ 221   5                          LCD_WriteCmd(0x01, 1);
+ 222   5                          LCD_ShowLine(1, "QR_Code_Control");
+ 223   5                          LCD_ShowLine(2, "                ");
+ 224   5                      }
+ 225   4                  }
+ 226   3                  else
+ 227   3                  {
+ 228   4                      if (last_mode == MODE_QR)
+ 229   4                      {
+ 230   5                          last_mode = g_mode;
+ 231   5                          LCD_WriteCmd(0x01, 1);
+ 232   5                          LCD_ShowLine(1, "Blue_Tooth       ");
+ 233   5                          LCD_ShowLine(2, "                ");
+ 234   5                      }
+ 235   4                  }
+ 236   3      
+ 237   3                  delay_ms(10);
+ 238   3              }
+ 239   2          }
+ 240   1      }
+C51 COMPILER V9.60.0.0   MAIN                                                              06/24/2026 16:25:37 PAGE 5   
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    592    ----
+   CONSTANT SIZE    =     51    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      5       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
